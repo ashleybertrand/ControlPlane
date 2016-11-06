@@ -211,14 +211,17 @@ class Router:
             cost = intf_cost[i]
 
         print("\n")
-        print("     Cost to")
-        print("         1 2")
-        print("------------")
+        print("        Cost to")
+        print("         1 2 3")
+        print("---------------")
         if (host == 1 and intf == 0):
             print("From 0 |", cost)
             print("     1 |")
         elif(host == 2 and intf == 0):
             print("From 0 |  ", cost)
+            print("     1 |")
+        elif(host == 3 and intf == 0):
+            print("From 0 |    ", cost)
             print("     1 |")
         elif(host == 1 and intf == 1):
             print("From 0 |")
@@ -226,9 +229,10 @@ class Router:
         elif(host == 2 and intf == 1):
             print("From 0 |")
             print("     1 |  ", cost)
+        elif(host == 3 and intf == 1):
+            print("From 0 |")
+            print("     1 |    ", cost)
         print("\n")
-
-        
                 
     ## thread target for the host to keep forwarding data
     def run(self):
