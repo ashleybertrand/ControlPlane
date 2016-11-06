@@ -1,0 +1,43 @@
+Host_1: Starting
+Host_2: Starting
+Router_A: Starting
+Router_B: Starting
+Network: Starting
+Router_A: sending routing update "000002Sample routing table packet" from interf
+ace 0
+Host_1: sending packet "000021Sample data 0"
+Link Router_A-0 to Router_B-0: transmitting packet "000002Sample routing table p
+acket"
+Router_B: Received routing update 000002Sample routing table packet
+Router_A: forwarding packet "000021Sample data 0" from interface 0 to 0
+Link Host_1-0 to Router_A-0: transmitting packet "000021Sample data 0"
+Link Router_A-0 to Router_B-0: transmitting packet "000021Sample data 0"
+Router_B: forwarding packet "000021Sample data 0" from interface 0 to 0
+Link Router_B-0 to Host_2-0: transmitting packet "000021Sample data 0"
+Host_2: received packet "000021Sample data 0"
+Router_A: routing table
+
+
+     Cost to
+         1 2
+------------
+From 0 |
+     1 | 1
+
+
+Router_B: routing table
+
+
+     Cost to
+         1 2
+------------
+From 0 |   3
+     1 |
+
+
+Host_1: Ending
+Router_B: Ending
+Router_A: Ending
+Network: Ending
+Host_2: Ending
+All simulation threads joined
