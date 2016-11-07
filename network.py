@@ -7,7 +7,7 @@ Created on Oct 12, 2016
 '''
 import queue
 import threading
-
+import ast
 
 ## wrapper class for a queue of packets
 class Interface:
@@ -68,7 +68,6 @@ class NetworkPacket:
     @classmethod
     def from_byte_S(self, byte_S):
         dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
-        print("destination address", dst_addr)
         prot_S = byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length]
         if prot_S == '1':
             prot_S = 'data'
@@ -134,8 +133,7 @@ class Router:
         for cost in out_intf_cost_L:
             self.out_intf_L.append(Interface(cost, max_queue_size))
         #set up the routing table for connected hosts
-        self.rt_tbl_D = rt_tbl_D 
-        self.max_queue_size = max_queue_size
+        self.rt_tbl_D = rt_tbl_D
 
     ## called when printing the object
     def __str__(self):
@@ -166,6 +164,7 @@ class Router:
             # TODO: Here you will need to implement a lookup into the 
             # forwarding table to find the appropriate outgoing interface
             # for now we assume the outgoing interface is also i
+            #according to distance vector protocol
             self.out_intf_L[i].put(p.to_byte_S(), True)
             print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, i))
         except queue.Full:
@@ -185,18 +184,14 @@ class Router:
     ## send out route update
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
-        # a sample route update packet
-        p = NetworkPacket(0, 'control', 'Sample routing table packet')
-        #message = Message(self.name, self.in_intf_L, self.out_intf_L, self.rt_tbl_D, self.max_queue_size)
         message = Message(self.rt_tbl_D)
-
+        p = NetworkPacket(0, 'control', message.to_byte_S())
+        
         try:
+            #TODO: add logic to send out a route update
+            #figure out correct interface to send out of
             self.out_intf_L[i].put(p.to_byte_S(), True)
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
-            
-            #TODO: add logic to send out a route update
-            #self.out_intf_L[i].put(message.to_byte_S(), True)
-            print('%s: sending routing update "%s" from interface %d' % (self, message, i))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
@@ -249,40 +244,20 @@ class Router:
                 return 
 
 class Message:
-    """
-    def __init__(self, name, in_intf_L, out_intf_L, rt_tbl_D, max_queue_size):
-        self.name = name
-        self.in_intf_L = in_intf_L
-        self.out_intf_L = out_intf_L
-        self.rt_tbl_D = rt_tbl_D
-        self.max_queue_size = max_queue_size
-    
+    """    
     #link state protocol
     #each node makes a graph showing all connections in the network (showing which nodes are connected to which nodes)
         #reachability matrix
         #send message to all neighbors
             #sequence number
     #each node independeptly calculates the next best logical path from it to every possible destination
-
     #the collection of best paths forms the routing table
-
-    #convert a router to a byte string for transmission over links
-    def to_byte_S(self):
-        byte_S = self.name + str(self.in_intf_L) + str(self.out_intf_L) + str(self.rt_tbl_D) + str(self.max_queue_size)
-        print(byte_S)   #to check formatting, might need to be made prettier
-        return byte_S
-    
-    #extract a router from a byte string
-    #@param byte_S: byte string representation of a router
-    @classmethod
-    def from_byte_S(self, byte_S):
-        return self(name, in_intf_L, out_intf_L, rt_tbl_D, max_queue_size)
     """
 
     def __init__(self, rt_tbl_D):
         self.rt_tbl_D = rt_tbl_D
 
-    #convert a router to a byte string for transmission over links
+    #convert routing table to a byte string for transmission over links
     def to_byte_S(self):
         rt_tbl_items = self.rt_tbl_D.items()
         rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
@@ -304,8 +279,59 @@ class Message:
                 rt_tbl_L[int(intf1)][host-1] = cost1
                 rt_tbl_L[int(intf2)][host-1] = cost2
 
-        interface0 = ' '.join(rt_tbl_L[0])
-        interface1 = ' '.join(rt_tbl_L[1])
+        interface0 = ''.join(rt_tbl_L[0])
+        interface1 = ''.join(rt_tbl_L[1])
         byte_S = interface0 + interface1
-        print(byte_S)
         return byte_S
+
+    #extract a message from a byte string
+    #@param byte_S: byte string representation of a message
+    @classmethod
+    def from_byte_S(self, byte_S):
+        #host 1 is utilizing 2 interfaces
+        if (byte_S[0].isdigit() and byte_S[3].isdigit()):
+            c0 = byte_S[0]
+            c3 = byte_S[3]
+            rt_tbl_S += ", 1: {0: " + c0 + ", 1: " + c3 + "}"
+        #host 1 is only utilizing interface 0
+        elif (byte_S[0].isdigit()):
+            c0 = byte_S[0]
+            rt_tbl_S = ", 1: {0: " + c0 + "}"
+        #host 1 is only utilizing interface 1
+        elif (byte_S[3].isdigit()):
+            c3 = byte_S[3]
+            rt_tbl_S = ", 1: {1: " + c3 + "}"
+
+        #host 2 is utilizing 2 interfaces
+        if (byte_S[1].isdigit() and byte_S[4].isdigit()):
+            c1 = byte_S[1]
+            c4 = byte_S[4]
+            rt_tbl_S += ", 2: {0: " + c1 + ", 1: " + c4 + "}"
+        #host 2 is only utilizing interface 0
+        elif (byte_S[1].isdigit()):
+            c1 = byte_S[1]
+            rt_tbl_S += ", 2: {0: " + c1 + "}"
+        #host 2 is only utilizing interface 1
+        elif (byte_S[4].isdigit()):
+            c4 = byte_S[4]
+            rt_tbl_S += ", 2: {1: " + c4 + "}"
+
+        #host 3 is utilizing 2 interfaces
+        if (byte_S[2].isdigit() and byte_S[5].isdigit()):
+            c2 = byte_S[2]
+            c5 = byte_S[5]
+            rt_tbl_S += ", 3: {0: " + c2 + ", 1: " + c5 + "}"
+        #host 3 is only utilizing interface 0
+        elif (byte_S[2].isdigit()):
+            c2 = byte_S[2]
+            rt_tbl_S = ", 3: {0: " + c2 + "}"
+        #host 3 is only utilizing interface 1
+        elif (byte_S[5].isdigit()):
+            c5 = byte_S[5]
+            rt_tbl_S = ", 3: {1: " + c5 + "}"
+
+        rt_tbl_S = rt_tbl_S[2:]
+        rt_tbl_S = "{" + rt_tbl_S + "}"
+
+        rt_tbl_D = ast.literal_eval(rt_tbl_S)
+        return self(rt_tbl_D)
