@@ -68,6 +68,7 @@ class NetworkPacket:
     @classmethod
     def from_byte_S(self, byte_S):
         dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
+        print("destination address", dst_addr)
         prot_S = byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length]
         if prot_S == '1':
             prot_S = 'data'
@@ -77,9 +78,6 @@ class NetworkPacket:
             raise('%s: unknown prot_S field: %s' %(self, prot_S))
         data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
         return self(dst_addr, prot_S, data_S)
-    
-
-    
 
 ## Implements a network host for receiving and transmitting data
 class Host:
@@ -119,8 +117,6 @@ class Host:
             if(self.stop):
                 print (threading.currentThread().getName() + ': Ending')
                 return
-        
-
 
 ## Implements a multi-interface router described in class
 class Router:
@@ -139,6 +135,7 @@ class Router:
             self.out_intf_L.append(Interface(cost, max_queue_size))
         #set up the routing table for connected hosts
         self.rt_tbl_D = rt_tbl_D 
+        self.max_queue_size = max_queue_size
 
     ## called when printing the object
     def __str__(self):
@@ -190,10 +187,16 @@ class Router:
     def send_routes(self, i):
         # a sample route update packet
         p = NetworkPacket(0, 'control', 'Sample routing table packet')
+        #message = Message(self.name, self.in_intf_L, self.out_intf_L, self.rt_tbl_D, self.max_queue_size)
+        message = Message(self.rt_tbl_D)
+
         try:
-            #TODO: add logic to send out a route update
             self.out_intf_L[i].put(p.to_byte_S(), True)
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
+            
+            #TODO: add logic to send out a route update
+            #self.out_intf_L[i].put(message.to_byte_S(), True)
+            print('%s: sending routing update "%s" from interface %d' % (self, message, i))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
@@ -245,23 +248,15 @@ class Router:
                 print (threading.currentThread().getName() + ': Ending')
                 return 
 
-"""
 class Message:
-    
-
-    def __init__(self, name):
+    """
+    def __init__(self, name, in_intf_L, out_intf_L, rt_tbl_D, max_queue_size):
         self.name = name
-
+        self.in_intf_L = in_intf_L
+        self.out_intf_L = out_intf_L
+        self.rt_tbl_D = rt_tbl_D
+        self.max_queue_size = max_queue_size
     
-    for i in self.rt_tbl_D:
-            host = i
-            intf_cost = self.rt_tbl_D[i]
-
-    for i in intf_cost:
-        intf = i
-        cost = intf_cost[i]
-
-
     #link state protocol
     #each node makes a graph showing all connections in the network (showing which nodes are connected to which nodes)
         #reachability matrix
@@ -271,32 +266,46 @@ class Message:
 
     #the collection of best paths forms the routing table
 
-
-
-    ## convert packet to a byte string for transmission over links
+    #convert a router to a byte string for transmission over links
     def to_byte_S(self):
-        byte_S = str(self.dst_addr).zfill(self.dst_addr_S_length)
-        if self.prot_S == 'data':
-            byte_S += '1'
-        elif self.prot_S == 'control':
-            byte_S += '2'
-        else:
-            raise('%s: unknown prot_S option: %s' %(self, self.prot_S))
-        byte_S += self.data_S
+        byte_S = self.name + str(self.in_intf_L) + str(self.out_intf_L) + str(self.rt_tbl_D) + str(self.max_queue_size)
+        print(byte_S)   #to check formatting, might need to be made prettier
         return byte_S
     
-    ## extract a packet object from a byte string
-    # @param byte_S: byte string representation of the packet
+    #extract a router from a byte string
+    #@param byte_S: byte string representation of a router
     @classmethod
     def from_byte_S(self, byte_S):
-        dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
-        prot_S = byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length]
-        if prot_S == '1':
-            prot_S = 'data'
-        elif prot_S == '2':
-            prot_S = 'control'
-        else:
-            raise('%s: unknown prot_S field: %s' %(self, prot_S))
-        data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
-        return self(dst_addr, prot_S, data_S)
+        return self(name, in_intf_L, out_intf_L, rt_tbl_D, max_queue_size)
     """
+
+    def __init__(self, rt_tbl_D):
+        self.rt_tbl_D = rt_tbl_D
+
+    #convert a router to a byte string for transmission over links
+    def to_byte_S(self):
+        rt_tbl_items = self.rt_tbl_D.items()
+        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
+
+        for host, intf_cost in rt_tbl_items:
+            #router is utilizing 1 interface
+            if (len(intf_cost) == 1):
+                intf_cost = str(intf_cost)
+                intf = str(intf_cost[1])
+                cost = str(intf_cost[4])
+                rt_tbl_L[int(intf)][host-1] = cost
+            #router is utilizing 2 interfaces
+            elif (len(intf_cost) == 2):
+                intf_cost = str(intf_cost)
+                intf1 = str(intf_cost[1])
+                cost1 = str(intf_cost[4])
+                intf2 = str(intf_cost[7])
+                cost2 = str(intf_cost[10])
+                rt_tbl_L[int(intf1)][host-1] = cost1
+                rt_tbl_L[int(intf2)][host-1] = cost2
+
+        interface0 = ' '.join(rt_tbl_L[0])
+        interface1 = ' '.join(rt_tbl_L[1])
+        byte_S = interface0 + interface1
+        print(byte_S)
+        return byte_S
