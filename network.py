@@ -175,13 +175,16 @@ class Router:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
         
+    #receive routing tables and update its own
+    #when an update occurs, may need to send to other nodes via send_routes
     ## forward the packet according to the routing table
     #  @param p Packet containing routing information
     def update_routes(self, p):
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
         print('%s: Received routing update %s' % (self, p))
-        
+    
+    #communicate routing table to nearby routers     
     ## send out route update
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
@@ -194,45 +197,44 @@ class Router:
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
-        
+
     ## Print routing table
     def print_routes(self):
         print('%s: routing table' % self)
         #TODO: print the routes as a two dimensional table for easy inspection
         # Currently the function just prints the route table as a dictionary
         #print(self.rt_tbl_D)
-        
-        for i in self.rt_tbl_D:
-            host = i
-            intf_cost = self.rt_tbl_D[i]
 
-        for i in intf_cost:
-            intf = i
-            cost = intf_cost[i]
+        rt_tbl_items = self.rt_tbl_D.items()
+        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
 
-        print("\n")
-        print("        Cost to")
-        print("         1 2 3")
-        print("---------------")
-        if (host == 1 and intf == 0):
-            print("From 0 |", cost)
-            print("     1 |")
-        elif(host == 2 and intf == 0):
-            print("From 0 |  ", cost)
-            print("     1 |")
-        elif(host == 3 and intf == 0):
-            print("From 0 |    ", cost)
-            print("     1 |")
-        elif(host == 1 and intf == 1):
-            print("From 0 |")
-            print("     1 |", cost)
-        elif(host == 2 and intf == 1):
-            print("From 0 |")
-            print("     1 |  ", cost)
-        elif(host == 3 and intf == 1):
-            print("From 0 |")
-            print("     1 |    ", cost)
-        print("\n")
+        for host, intf_cost in rt_tbl_items:
+            #router is utilizing 1 interface
+            if (len(intf_cost) == 1):
+                intf_cost = str(intf_cost)
+                intf = str(intf_cost[1])
+                cost = str(intf_cost[4])
+                rt_tbl_L[int(intf)][host-1] = cost
+            #router is utilizing 2 interfaces
+            elif (len(intf_cost) == 2):
+                intf_cost = str(intf_cost)
+                intf1 = str(intf_cost[1])
+                cost1 = str(intf_cost[4])
+                intf2 = str(intf_cost[7])
+                cost2 = str(intf_cost[10])
+                rt_tbl_L[int(intf1)][host-1] = cost1
+                rt_tbl_L[int(intf2)][host-1] = cost2
+
+        interface0 = ' '.join(rt_tbl_L[0])
+        interface1 = ' '.join(rt_tbl_L[1])
+
+        print()
+        print("       Cost to")
+        print("       | 1 2 3")
+        print("     --+------")
+        print("From 0 |", interface0)
+        print("     1 |", interface1)
+        print()
                 
     ## thread target for the host to keep forwarding data
     def run(self):
@@ -242,3 +244,59 @@ class Router:
             if self.stop:
                 print (threading.currentThread().getName() + ': Ending')
                 return 
+
+"""
+class Message:
+    
+
+    def __init__(self, name):
+        self.name = name
+
+    
+    for i in self.rt_tbl_D:
+            host = i
+            intf_cost = self.rt_tbl_D[i]
+
+    for i in intf_cost:
+        intf = i
+        cost = intf_cost[i]
+
+
+    #link state protocol
+    #each node makes a graph showing all connections in the network (showing which nodes are connected to which nodes)
+        #reachability matrix
+        #send message to all neighbors
+            #sequence number
+    #each node independeptly calculates the next best logical path from it to every possible destination
+
+    #the collection of best paths forms the routing table
+
+
+
+    ## convert packet to a byte string for transmission over links
+    def to_byte_S(self):
+        byte_S = str(self.dst_addr).zfill(self.dst_addr_S_length)
+        if self.prot_S == 'data':
+            byte_S += '1'
+        elif self.prot_S == 'control':
+            byte_S += '2'
+        else:
+            raise('%s: unknown prot_S option: %s' %(self, self.prot_S))
+        byte_S += self.data_S
+        return byte_S
+    
+    ## extract a packet object from a byte string
+    # @param byte_S: byte string representation of the packet
+    @classmethod
+    def from_byte_S(self, byte_S):
+        dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
+        prot_S = byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length]
+        if prot_S == '1':
+            prot_S = 'data'
+        elif prot_S == '2':
+            prot_S = 'control'
+        else:
+            raise('%s: unknown prot_S field: %s' %(self, prot_S))
+        data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
+        return self(dst_addr, prot_S, data_S)
+    """
