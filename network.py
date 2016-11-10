@@ -164,18 +164,20 @@ class Router:
             # TODO: Here you will need to implement a lookup into the 
             # forwarding table to find the appropriate outgoing interface
             # for now we assume the outgoing interface is also i
-            #according to distance vector protocol
+            #forward packets based on routing tables that are computed through the distance vector protocol
             self.out_intf_L[i].put(p.to_byte_S(), True)
             print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, i))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
         
-    #receive routing tables and update its own
-    #when an update occurs, may need to send to other nodes via send_routes
+    #a router will receive and update its own routing tables
+    #call Bellman-Ford equation to compute updated costs to destinations
+    #as you update costs, you may need to send out changes in routing table to other nodes using send_routes()
     ## forward the packet according to the routing table
     #  @param p Packet containing routing information
     def update_routes(self, p):
+        #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
         print('%s: Received routing update %s' % (self, p))
@@ -184,11 +186,17 @@ class Router:
     ## send out route update
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
-        message = Message(self.rt_tbl_D)
+        if (self.name == "A"):
+            cost = self.out_intf_L[0].cost
+        elif (self.name == "B"):
+            cost = self.out_intf_L[1].cost
+
+        message = Message(self.rt_tbl_D, self.name, cost)
         p = NetworkPacket(0, 'control', message.to_byte_S())
         
         try:
             #TODO: add logic to send out a route update
+            #decide which interfaces to use to send out the routing table updates
             #figure out correct interface to send out of
             self.out_intf_L[i].put(p.to_byte_S(), True)
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
@@ -204,15 +212,15 @@ class Router:
         #print(self.rt_tbl_D)
 
         rt_tbl_items = self.rt_tbl_D.items()
-        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
+        rt_tbl_L = [["-", "-", "-", "-"], ["-", "-", "-", "-"]]
 
-        for host, intf_cost in rt_tbl_items:
+        for node, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface
             if (len(intf_cost) == 1):
                 intf_cost = str(intf_cost)
                 intf = str(intf_cost[1])
                 cost = str(intf_cost[4])
-                rt_tbl_L[int(intf)][host-1] = cost
+                rt_tbl_L[int(intf)][node-1] = cost
             #router is utilizing 2 interfaces
             elif (len(intf_cost) == 2):
                 intf_cost = str(intf_cost)
@@ -220,16 +228,23 @@ class Router:
                 cost1 = str(intf_cost[4])
                 intf2 = str(intf_cost[7])
                 cost2 = str(intf_cost[10])
-                rt_tbl_L[int(intf1)][host-1] = cost1
-                rt_tbl_L[int(intf2)][host-1] = cost2
+                rt_tbl_L[int(intf1)][node-1] = cost1
+                rt_tbl_L[int(intf2)][node-1] = cost2
+
+        if (self.name == "A"):
+            cost_to_router = self.out_intf_L[0].cost
+            rt_tbl_L[0][3] = str(cost_to_router)
+        elif (self.name == "B"):
+            cost_to_router = self.out_intf_L[1].cost
+            rt_tbl_L[1][2] = str(cost_to_router)
 
         interface0 = ' '.join(rt_tbl_L[0])
         interface1 = ' '.join(rt_tbl_L[1])
 
         print()
-        print("       Cost to")
-        print("       | 1 2 3")
-        print("     --+------")
+        print("         Cost to")
+        print("       | 1 2 A B")
+        print("     --+--------")
         print("From 0 |", interface0)
         print("     1 |", interface1)
         print()
@@ -254,21 +269,23 @@ class Message:
     #the collection of best paths forms the routing table
     """
 
-    def __init__(self, rt_tbl_D):
+    def __init__(self, rt_tbl_D, router_name, out_intf_cost):
         self.rt_tbl_D = rt_tbl_D
+        self.router_name = router_name
+        self.out_intf_cost = out_intf_cost
 
     #convert routing table to a byte string for transmission over links
     def to_byte_S(self):
         rt_tbl_items = self.rt_tbl_D.items()
-        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
+        rt_tbl_L = [["-", "-", "-", "-"], ["-", "-", "-", "-"]]
 
-        for host, intf_cost in rt_tbl_items:
+        for node, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface
             if (len(intf_cost) == 1):
                 intf_cost = str(intf_cost)
                 intf = str(intf_cost[1])
                 cost = str(intf_cost[4])
-                rt_tbl_L[int(intf)][host-1] = cost
+                rt_tbl_L[int(intf)][node-1] = cost
             #router is utilizing 2 interfaces
             elif (len(intf_cost) == 2):
                 intf_cost = str(intf_cost)
@@ -276,8 +293,15 @@ class Message:
                 cost1 = str(intf_cost[4])
                 intf2 = str(intf_cost[7])
                 cost2 = str(intf_cost[10])
-                rt_tbl_L[int(intf1)][host-1] = cost1
-                rt_tbl_L[int(intf2)][host-1] = cost2
+                rt_tbl_L[int(intf1)][node-1] = cost1
+                rt_tbl_L[int(intf2)][node-1] = cost2
+
+        if (self.router_name == "A"):
+            cost_to_router = self.out_intf_cost
+            rt_tbl_L[0][3] = str(cost_to_router)
+        elif (self.router_name == "B"):
+            cost_to_router = self.out_intf_cost
+            rt_tbl_L[1][2] = str(cost_to_router)
 
         interface0 = ''.join(rt_tbl_L[0])
         interface1 = ''.join(rt_tbl_L[1])
@@ -289,49 +313,42 @@ class Message:
     @classmethod
     def from_byte_S(self, byte_S):
         #host 1 is utilizing 2 interfaces
-        if (byte_S[0].isdigit() and byte_S[3].isdigit()):
+        if (byte_S[0].isdigit() and byte_S[4].isdigit()):
             c0 = byte_S[0]
-            c3 = byte_S[3]
-            rt_tbl_S += ", 1: {0: " + c0 + ", 1: " + c3 + "}"
+            c4 = byte_S[4]
+            rt_tbl_S += ", 1: {0: " + c0 + ", 1: " + c4 + "}"
         #host 1 is only utilizing interface 0
         elif (byte_S[0].isdigit()):
             c0 = byte_S[0]
             rt_tbl_S = ", 1: {0: " + c0 + "}"
         #host 1 is only utilizing interface 1
-        elif (byte_S[3].isdigit()):
-            c3 = byte_S[3]
-            rt_tbl_S = ", 1: {1: " + c3 + "}"
+        elif (byte_S[4].isdigit()):
+            c4 = byte_S[4]
+            rt_tbl_S = ", 1: {1: " + c4 + "}"
 
         #host 2 is utilizing 2 interfaces
-        if (byte_S[1].isdigit() and byte_S[4].isdigit()):
+        if (byte_S[1].isdigit() and byte_S[5].isdigit()):
             c1 = byte_S[1]
-            c4 = byte_S[4]
-            rt_tbl_S += ", 2: {0: " + c1 + ", 1: " + c4 + "}"
+            c5 = byte_S[5]
+            rt_tbl_S += ", 2: {0: " + c1 + ", 1: " + c5 + "}"
         #host 2 is only utilizing interface 0
         elif (byte_S[1].isdigit()):
             c1 = byte_S[1]
             rt_tbl_S += ", 2: {0: " + c1 + "}"
         #host 2 is only utilizing interface 1
-        elif (byte_S[4].isdigit()):
-            c4 = byte_S[4]
-            rt_tbl_S += ", 2: {1: " + c4 + "}"
-
-        #host 3 is utilizing 2 interfaces
-        if (byte_S[2].isdigit() and byte_S[5].isdigit()):
-            c2 = byte_S[2]
-            c5 = byte_S[5]
-            rt_tbl_S += ", 3: {0: " + c2 + ", 1: " + c5 + "}"
-        #host 3 is only utilizing interface 0
-        elif (byte_S[2].isdigit()):
-            c2 = byte_S[2]
-            rt_tbl_S = ", 3: {0: " + c2 + "}"
-        #host 3 is only utilizing interface 1
         elif (byte_S[5].isdigit()):
             c5 = byte_S[5]
-            rt_tbl_S = ", 3: {1: " + c5 + "}"
+            rt_tbl_S += ", 2: {1: " + c5 + "}"
 
         rt_tbl_S = rt_tbl_S[2:]
         rt_tbl_S = "{" + rt_tbl_S + "}"
 
+        if (byte_S[3].isdigit()):
+            router_name = "A"
+            out_intf_cost = byte_S[3]
+        elif (byte_S[6].isdigit()):
+            router_name = "B"
+            out_intf_cost = byte_S[6]
+
         rt_tbl_D = ast.literal_eval(rt_tbl_S)
-        return self(rt_tbl_D)
+        return self(rt_tbl_D, router_name, out_intf_cost)
