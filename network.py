@@ -180,6 +180,27 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
+        if (self.name == "A"):
+            cost = self.out_intf_L[0].cost
+            i = 0   #to send routing table to router B through A, must go through interface 0
+        elif (self.name == "B"):
+            cost = self.out_intf_L[1].cost
+            i = 1   #to send routing table to router A through B, must go through interface 1
+
+        message = Message(self.rt_tbl_D, self.name, cost)
+        old_message_S = message.to_byte_S()
+
+        #reset rt_tbl_D according to the received message
+        new_routing_table = message.from_byte_S(p.data_S, False)
+        self.rt_tbl_D = new_routing_table
+
+        #use new rt_tbl_D to make a new message string
+        new_message_S = message.to_byte_S()
+
+        #if a change has been made to the routing table, send new message
+        if (new_message_S != old_message_S):
+            send_routes(i)
+
         print('%s: Received routing update %s' % (self, p))
     
     #communicate routing table to nearby routers     
@@ -188,8 +209,10 @@ class Router:
     def send_routes(self, i):
         if (self.name == "A"):
             cost = self.out_intf_L[0].cost
+            i = 0   #to send routing table to router B through A, must go through interface 0
         elif (self.name == "B"):
             cost = self.out_intf_L[1].cost
+            i = 1   #to send routing table to router A through B, must go through interface 1
 
         message = Message(self.rt_tbl_D, self.name, cost)
         p = NetworkPacket(0, 'control', message.to_byte_S())
@@ -311,7 +334,7 @@ class Message:
     #extract a message from a byte string
     #@param byte_S: byte string representation of a message
     @classmethod
-    def from_byte_S(self, byte_S):
+    def from_byte_S(self, byte_S, return_msg):
         #host 1 is utilizing 2 interfaces
         if (byte_S[0].isdigit() and byte_S[4].isdigit()):
             c0 = byte_S[0]
@@ -351,4 +374,10 @@ class Message:
             out_intf_cost = byte_S[6]
 
         rt_tbl_D = ast.literal_eval(rt_tbl_S)
-        return self(rt_tbl_D, router_name, out_intf_cost)
+
+        #return_msg is True so return message
+        if (return_msg):
+            return self(rt_tbl_D, router_name, out_intf_cost)
+        #return_msg is False so return routing table
+        else:
+            return rt_tbl_D
