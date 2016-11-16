@@ -180,17 +180,21 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
-        """
-        if (self.name == "A"):
-            cost = self.out_intf_L[0].cost
-            i = 0   #to send routing table to router B through A, must go through interface 0
-        elif (self.name == "B"):
-            cost = self.out_intf_L[1].cost
-            i = 1   #to send routing table to router A through B, must go through interface 1
-
         message = Message(self.rt_tbl_D)
         old_message_S = message.to_byte_S()
+        new_message_S = old_message_S
 
+        #Bellman-Ford
+        if (self.name == "A"):
+            index = 1
+            cost = self.out_intf_L[0].cost
+        elif (self.name == "B"):
+            index = 2
+            cost = 
+        
+
+        new_message_S[index] = cost
+        """
         #reset rt_tbl_D according to the received message
         new_routing_table = message.from_byte_S(p.data_S, False)
         self.rt_tbl_D = new_routing_table
