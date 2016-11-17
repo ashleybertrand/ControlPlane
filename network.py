@@ -7,6 +7,9 @@ import queue
 import threading
 import ast
 
+#keep track if message received is an update to routing table
+new_update = True
+
 ## wrapper class for a queue of packets
 class Interface:
     ## @param maxsize - the maximum size of the queue storing packets
@@ -91,7 +94,6 @@ class NetworkPacket:
         data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
         return self(dst_addr, prot_S, data_S)
 
-## Implements a network host for receiving and transmitting data
 ## Implements a network host for receiving and transmitting data
 class Host:
     
@@ -192,52 +194,48 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
-    
-
         print('%s: Received routing update %s' % (self, p))
         message = p.data_S  #ie. B received 1---
 
-        int_0_cost = -99
-        int_1_cost = -99
-       
+        #check to see if this is a new update
+        num_digits = 0
         for i in range(len(message)):
             if (message[i].isdigit()):
-                #there is a cost at interface 0
-                if (i == 0 or i == 1):
-                    int_0_cost = int(message[i])
-                #there is a cost at interface 1
-                if (i == 2 or i == 3):
-                    int_1_cost = int(message[i])
+                num_digits = num_digits + 1
 
-        if (self.name == "A"):
-            to_host = 2
-            cost = self.intf_L[1].cost
-        elif (self.name == "B"):
-            to_host = 1
-            cost = self.intf_L[0].cost
+        global new_update
+        #only run update if this is the first or second message received
+        if (num_digits == 1 or (num_digits == 2 and new_update)):
 
-        #print(cost)
-        #print(int_0_cost)
-        #print(int_1_cost)
-        #print(self.rt_tbl_D)
+            if (num_digits == 2):
+                new_update = False
 
-        if (int_0_cost != -99):
-            #if to_host not in self.rt_tbl_D:
-             #   self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
+            int_0_cost = -99
+            int_1_cost = -99
+       
+            for i in range(len(message)):
+                if (message[i].isdigit()):
+                    #there is a cost at interface 0
+                    if (i == 0):
+                        int_0_cost = int(message[i])
+                    #there is a cost at interface 1
+                    if (i == 3):
+                        int_1_cost = int(message[i])
 
-            #if (int_0_cost + cost) < (self.rt_tbl_D[to_host][1]):
+            if (self.name == "A"):
+                to_host = 2
+                cost = self.intf_L[1].cost  #router A's interface 1 cost
+            elif (self.name == "B"):
+                to_host = 1
+                cost = self.intf_L[0].cost  #router B's interface 0 cost
+
+            if (int_0_cost != -99):
                 self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
 
-        if (int_1_cost != -99):
-            #if to_host not in self.rt_tbl_D:
-             #   self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
-
-            #if (int_1_cost + cost) < (self.rt_tbl_D[to_host][1]):
+            if (int_1_cost != -99):
                 self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
 
-        self.send_routes(0)
-
-
+            self.send_routes(0)
     
     #communicate routing table to nearby routers     
     ## send out route update
