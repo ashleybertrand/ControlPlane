@@ -209,14 +209,16 @@ class Router:
 
         if (self.name == "A"):
             to_host = 2
+            cost = self.intf_L[1].cost
         elif (self.name == "B"):
             to_host = 1
+            cost = self.intf_L[0].cost
 
         if (int_0_cost != -99):
-            self.rt_tbl_D[to_host] = {0: int_0_cost}
+            self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
 
         if (int_1_cost != -99):
-            self.rt_tbl_D[to_host] = {1: int_1_cost}
+            self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
 
         #send_routes()
 
