@@ -192,6 +192,14 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
+        
+
+        '''
+        Megan added this fake data
+        '''
+        new_value = {0: 1}
+        self.rt_tbl_D[1]=new_value
+
         print('%s: Received routing update %s' % (self, p))
     
     #communicate routing table to nearby routers     
@@ -225,6 +233,7 @@ class Router:
 
         rt_tbl_items = self.rt_tbl_D.items()
         rt_tbl_L = [["-", "-"], ["-", "-"]]
+
 
         for host, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface
