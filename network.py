@@ -1,8 +1,6 @@
 '''
 Created on Oct 12, 2016
-
 @author: mwitt_000
-
 @modified by: Megan Weller and Ashley Bertrand
 '''
 import queue
@@ -14,21 +12,36 @@ class Interface:
     ## @param maxsize - the maximum size of the queue storing packets
     #  @param cost - of the interface used in routing
     def __init__(self, cost=0, maxsize=0):
-        self.queue = queue.Queue(maxsize);
+        self.in_queue = queue.Queue(maxsize);
+        self.out_queue = queue.Queue(maxsize);
         self.cost = cost
     
     ##get packet from the queue interface
-    def get(self):
+    def get(self, in_or_out):
         try:
-            return self.queue.get(False)
+            if in_or_out == 'in':
+                pkt_S = self.in_queue.get(False)
+#                 if pkt_S is not None:
+#                     print('getting packet from the IN queue')
+                return pkt_S
+            else:
+                pkt_S = self.out_queue.get(False)
+#                 if pkt_S is not None:
+#                     print('getting packet from the OUT queue')
+                return pkt_S
         except queue.Empty:
             return None
         
     ##put the packet into the interface queue
     # @param pkt - Packet to be inserted into the queue
     # @param block - if True, block until room in queue, if False may throw queue.Full exception
-    def put(self, pkt, block=False):
-        self.queue.put(pkt, block)
+    def put(self, pkt, in_or_out, block=False):
+        if in_or_out == 'out':
+#             print('putting packet in the OUT queue')
+            self.out_queue.put(pkt, block)
+        else:
+#             print('putting packet in the IN queue')
+            self.in_queue.put(pkt, block)
         
 ## Implements a network layer packet (different from the RDT packet 
 # from programming assignment 2).
@@ -79,13 +92,13 @@ class NetworkPacket:
         return self(dst_addr, prot_S, data_S)
 
 ## Implements a network host for receiving and transmitting data
+## Implements a network host for receiving and transmitting data
 class Host:
     
     ##@param addr: address of this node represented as an integer
     def __init__(self, addr):
         self.addr = addr
-        self.in_intf_L = [Interface()]
-        self.out_intf_L = [Interface()]
+        self.intf_L = [Interface()]
         self.stop = False #for thread termination
     
     ## called when printing the object
@@ -97,12 +110,12 @@ class Host:
     # @param data_S: data being transmitted to the network layer
     def udt_send(self, dst_addr, data_S):
         p = NetworkPacket(dst_addr, 'data', data_S)
-        self.out_intf_L[0].put(p.to_byte_S()) #send packets always enqueued successfully
         print('%s: sending packet "%s"' % (self, p))
+        self.intf_L[0].put(p.to_byte_S(), 'out') #send packets always enqueued successfully
         
     ## receive packet from the network layer
     def udt_receive(self):
-        pkt_S = self.in_intf_L[0].get()
+        pkt_S = self.intf_L[0].get('in')
         if pkt_S is not None:
             print('%s: received packet "%s"' % (self, pkt_S))
        
@@ -123,17 +136,16 @@ class Router:
     ##@param name: friendly router name for debugging
     # @param intf_count: the number of input and output interfaces 
     # @param max_queue_size: max queue length (passed to Interface)
-    def __init__(self, name, in_intf_count, out_intf_cost_L, rt_tbl_D, max_queue_size):
+    def __init__(self, name, intf_cost_L, rt_tbl_D, max_queue_size):
         self.stop = False #for thread termination
         self.name = name
         #create a list of interfaces
-        self.in_intf_L = [Interface(max_queue_size) for _ in range(in_intf_count)]
-        #note the number of outgoing interfaces is set up by out_intf_cost_L
-        self.out_intf_L = []
-        for cost in out_intf_cost_L:
-            self.out_intf_L.append(Interface(cost, max_queue_size))
+        #note the number of interfaces is set up by out_intf_cost_L
+        self.intf_L = []
+        for cost in intf_cost_L:
+            self.intf_L.append(Interface(cost, max_queue_size))
         #set up the routing table for connected hosts
-        self.rt_tbl_D = rt_tbl_D
+        self.rt_tbl_D = rt_tbl_D 
 
     ## called when printing the object
     def __str__(self):
@@ -142,10 +154,10 @@ class Router:
     ## look through the content of incoming interfaces and 
     # process data and control packets
     def process_queues(self):
-        for i in range(len(self.in_intf_L)):
+        for i in range(len(self.intf_L)):
             pkt_S = None
             #get packet from interface i
-            pkt_S = self.in_intf_L[i].get()
+            pkt_S = self.intf_L[i].get('in')
             #if packet exists make a forwarding decision
             if pkt_S is not None:
                 p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
@@ -165,8 +177,8 @@ class Router:
             # forwarding table to find the appropriate outgoing interface
             # for now we assume the outgoing interface is also i
             #forward packets based on routing tables that are computed through the distance vector protocol
-            self.out_intf_L[i].put(p.to_byte_S(), True)
-            print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, i))
+            self.intf_L[(i+1)%2].put(p.to_byte_S(), 'out', True)
+            print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, (i+1)%2))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
@@ -180,33 +192,6 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
-        message = Message(self.rt_tbl_D)
-        old_message_S = message.to_byte_S()
-        new_message_S = old_message_S
-
-        #Bellman-Ford
-        if (self.name == "A"):
-            index = 1
-            cost = self.out_intf_L[0].cost
-        elif (self.name == "B"):
-            index = 2
-            cost = 
-        
-
-        new_message_S[index] = cost
-        """
-        #reset rt_tbl_D according to the received message
-        new_routing_table = message.from_byte_S(p.data_S, False)
-        self.rt_tbl_D = new_routing_table
-
-        #use new rt_tbl_D to make a new message string
-        new_message_S = message.to_byte_S()
-
-        #if a change has been made to the routing table, send new message
-        if (new_message_S != old_message_S):
-            send_routes(i)
-        """
-
         print('%s: Received routing update %s' % (self, p))
     
     #communicate routing table to nearby routers     
@@ -214,11 +199,9 @@ class Router:
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
         if (self.name == "A"):
-            #cost = self.out_intf_L[0].cost
-            i = 0   #to send routing table to router B through A, must go through interface 0
+            i = 1   #to send routing table to router B through A, must go through interface 1
         elif (self.name == "B"):
-            #cost = self.out_intf_L[1].cost
-            i = 1   #to send routing table to router A through B, must go through interface 1
+            i = 0   #to send routing table to router A through B, must go through interface 0
 
         message = Message(self.rt_tbl_D)
         p = NetworkPacket(0, 'control', message.to_byte_S())
@@ -227,7 +210,7 @@ class Router:
             #TODO: add logic to send out a route update
             #decide which interfaces to use to send out the routing table updates
             #figure out correct interface to send out of
-            self.out_intf_L[i].put(p.to_byte_S(), True)
+            self.intf_L[i].put(p.to_byte_S(), 'out', True)
             print('%s: sending routing update "%s" from interface %d' % (self, p, i))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
