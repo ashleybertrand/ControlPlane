@@ -192,27 +192,21 @@ class Router:
         #update own routing table based on what is received
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
-        
-
-        '''
-        Megan added this fake data
-        '''
-        new_value = {0: 1}
-        self.rt_tbl_D[1]=new_value
+    
 
         print('%s: Received routing update %s' % (self, p))
         message = p.data_S  #ie. B received 1---
 
         int_0_cost = -99
         int_1_cost = -99
-
+       
         for i in range(len(message)):
             if (message[i].isdigit()):
                 #there is a cost at interface 0
-                if (i == 0):
+                if (i == 0 or i == 1):
                     int_0_cost = int(message[i])
                 #there is a cost at interface 1
-                if (i == 2):
+                if (i == 2 or i == 3):
                     int_1_cost = int(message[i])
 
         if (self.name == "A"):
@@ -222,13 +216,26 @@ class Router:
             to_host = 1
             cost = self.intf_L[0].cost
 
+        #print(cost)
+        #print(int_0_cost)
+        #print(int_1_cost)
+        #print(self.rt_tbl_D)
+
         if (int_0_cost != -99):
-            self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
+            #if to_host not in self.rt_tbl_D:
+             #   self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
+
+            #if (int_0_cost + cost) < (self.rt_tbl_D[to_host][1]):
+                self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
 
         if (int_1_cost != -99):
-            self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
+            #if to_host not in self.rt_tbl_D:
+             #   self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
 
-        #send_routes()
+            #if (int_1_cost + cost) < (self.rt_tbl_D[to_host][1]):
+                self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
+
+        self.send_routes(0)
 
 
     
@@ -238,7 +245,7 @@ class Router:
     def send_routes(self, i):
         message = Message(self.rt_tbl_D)
         p = NetworkPacket(0, 'control', message.to_byte_S())
-
+        
         if (self.name == "A"):
             i = 1   #to send routing table to router B through A, must go through interface 1
             p.dst_addr = 2  #sending to host 2
