@@ -205,6 +205,7 @@ class Router:
 
         message = Message(self.rt_tbl_D)
         p = NetworkPacket(0, 'control', message.to_byte_S())
+
         
         try:
             #TODO: add logic to send out a route update
