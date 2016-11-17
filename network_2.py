@@ -248,6 +248,7 @@ class Router:
             int_0_cost = -99
             int_1_cost = -99
             cost = -99
+            to_host = 0
        
             for i in range(len(message)):
                 if (message[i].isdigit()):
@@ -259,11 +260,20 @@ class Router:
                         int_1_cost = int(message[i])
 
             if (self.name == "A"):
-                to_host = 2
+                to_host = p.dst_addr
                 cost = self.intf_L[1].cost  #router A's interface 1 cost
             elif (self.name == "B"):
-                to_host = 1
+                to_host = p.dst_addr
                 cost = self.intf_L[0].cost  #router B's interface 0 cost
+            elif (self.name == "C"):
+                to_host = p.dst_addr
+                cost = self.intf_L[0].cost
+            elif (self.name == "D"):
+                to_host = p.dst_addr
+                cost = self.intf_L[1].cost
+
+
+
 
             if (int_0_cost != -99):
                 self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
@@ -282,11 +292,19 @@ class Router:
         
         if (self.name == "A"):
             i = 1   #to send routing table to router B through A, must go through interface 1
-            p.dst_addr = 2  #sending to host 2
+            p.dst_addr = 3  #sending to host 2
 
         elif (self.name == "B"):
             i = 0   #to send routing table to router A through B, must go through interface 0
-            p.dst_addr = 1  #sending to host 1
+            p.dst_addr = 3  #sending to host 1
+
+        elif (self.name == 'C'):
+            i = 0
+            p.dst_addr = 1
+
+        elif (self.name == 'D'):
+            i = 0
+            p.dst_addr = 1
 
         try:
             #TODO: add logic to send out a route update
@@ -306,9 +324,9 @@ class Router:
         #print(self.rt_tbl_D)
 
         rt_tbl_items = self.rt_tbl_D.items()
-        rt_tbl_L = [["-", "-"], ["-", "-"]]
+        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
 
-
+    
         for host, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface
             if (len(intf_cost) == 1):
@@ -323,6 +341,7 @@ class Router:
                 cost1 = str(intf_cost[4])
                 intf2 = str(intf_cost[7])
                 cost2 = str(intf_cost[10])
+
                 rt_tbl_L[int(intf1)][host-1] = cost1
                 rt_tbl_L[int(intf2)][host-1] = cost2
 
@@ -331,8 +350,8 @@ class Router:
 
         print()
         print("     Cost to")
-        print("       | 1 2")
-        print("     --+----")
+        print("       | 1 2 3")
+        print("     --+-------")
         print("From 0 |", interface0)
         print("     1 |", interface1)
         print()
@@ -353,7 +372,7 @@ class Message:
     #convert routing table to a byte string for transmission over links
     def to_byte_S(self):
         rt_tbl_items = self.rt_tbl_D.items()
-        rt_tbl_L = [["-", "-"], ["-", "-"]]
+        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
 
         for host, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface

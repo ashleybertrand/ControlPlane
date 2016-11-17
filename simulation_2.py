@@ -32,7 +32,7 @@ if __name__ == '__main__':
                               max_queue_size=router_queue_size,
                               forwarding_table = forwarding_table)
     object_L.append(router_a)
-    router_b_rt_tbl_D = {2: {1: 3}} # packet to host 2 through interface 0 for cost 3
+    router_b_rt_tbl_D = {1: {1: 3}} # packet to host 2 through interface 0 for cost 3
     router_b = network_2.Router(name='B', 
                               intf_cost_L=[1,3], 
                               rt_tbl_D = router_b_rt_tbl_D, 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
                               max_queue_size=router_queue_size,
                               forwarding_table = forwarding_table)
     object_L.append(router_c)
-    router_d_rt_tbl_D = {2: {1: 3}} # packet to host ? through interface ? for cost ?
+    router_d_rt_tbl_D = {3: {1: 3}} # packet to host ? through interface ? for cost ?
     router_d = network_2.Router(name='D', 
                               intf_cost_L=[1,3], 
                               rt_tbl_D = router_d_rt_tbl_D, 
@@ -60,12 +60,18 @@ if __name__ == '__main__':
     
     #add all the links
     link_layer.add_link(link_2.Link(host1, 0, router_a, 0))
-    link_layer.add_link(link_2.Link(host2, 0, router_a, 1))
+    #link_layer.add_link(link_2.Link(host2, 0, router_a, 1))
     link_layer.add_link(link_2.Link(router_a, 0, router_b, 0))
-    link_layer.add_link(link_2.Link(router_a, 1, router_c, 0))
     link_layer.add_link(link_2.Link(router_b, 0, router_d, 0))
-    link_layer.add_link(link_2.Link(router_c, 0, router_d, 1))
     link_layer.add_link(link_2.Link(router_d, 0, host3, 0))
+    
+    link_layer.add_link(link_2.Link(host3, 0, router_d, 0))
+    link_layer.add_link(link_2.Link(router_d, 1, router_c, 0))
+    link_layer.add_link(link_2.Link(router_c, 0, router_a, 1))
+    link_layer.add_link(link_2.Link(router_a, 0, host1, 0))
+
+
+
     
     #start all the objects
     thread_L = []
@@ -77,11 +83,13 @@ if __name__ == '__main__':
     
     #send out routing information from router A to router B interface 0
     router_a.send_routes(1)
+ 
+
     
     #create some send events    
     for i in range(1):
         host1.udt_send(3, 1, 'Sample host1 data %d' % i)
-        host3.udt_send(1, 3, 'Sample host2 data %d' % i)
+        #host3.udt_send(1, 3, 'Sample host3 data %d' % i)
         
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)
