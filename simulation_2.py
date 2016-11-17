@@ -24,7 +24,7 @@ if __name__ == '__main__':
     object_L.append(host3)
     
     #create routers and routing tables for connected clients (subnets)
-    forwarding_table = [[['A', 0], ['B', 0], ['D',0]], [['A',1], ['C',0], ['D',0]]]
+    forwarding_table = [[['A', 0], ['B', 0], ['D',0]], [['D',0], ['C',0], ['A',1]]]
     router_a_rt_tbl_D = {1: {0: 1}} # packet to host 1 through interface 1 for cost 1
     router_a = network_2.Router(name='A', 
                               intf_cost_L=[1,1], 
@@ -80,8 +80,8 @@ if __name__ == '__main__':
     
     #create some send events    
     for i in range(1):
-        host1.udt_send(3, 0, 'Sample host1 data %d' % i)
-        host2.udt_send(3, 1, 'Sample host2 data %d' % i)
+        host1.udt_send(3, 1, 'Sample host1 data %d' % i)
+        host3.udt_send(1, 3, 'Sample host2 data %d' % i)
         
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)

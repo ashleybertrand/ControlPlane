@@ -186,7 +186,7 @@ class Router:
             # for now we assume the outgoing interface is also i
 
             #packet comes for host1
-            if (int(p.source) == 0):
+            if (int(p.source) == 1):
                 if self.name == 'A':
                     outgoing = self.forwarding_table[0][0][1]
                 elif self.name == 'B':
@@ -199,12 +199,13 @@ class Router:
                 print("from interface %d to %d" % (i, outgoing))
                 self.intf_L[(outgoing+1)%2].put(p.to_byte_S(), 'out', True)
 
-            elif (int(p.source) == 1):
-                if self.name == 'A':
+            #packet comes for host3
+            elif (int(p.source) == 3):
+                if self.name == 'D':
                     outgoing = self.forwarding_table[1][0][1]
                 elif self.name == 'C':
                     outgoing = self.forwarding_table[1][1][1]
-                elif self.name == 'D':
+                elif self.name == 'A':
                     outgoing = self.forwarding_table[1][2][1]
                 
                 print("Router_" + self.name + "-" + str(i), end=": ")
