@@ -201,20 +201,52 @@ class Router:
         self.rt_tbl_D[1]=new_value
 
         print('%s: Received routing update %s' % (self, p))
+        message = p.data_S  #ie. B received 1---
+
+        int_0_cost = -99
+        int_1_cost = -99
+
+        for i in range(len(message)):
+            if (message[i].isdigit()):
+                #there is a cost at interface 0
+                if (i == 0):
+                    int_0_cost = int(message[i])
+                #there is a cost at interface 1
+                if (i == 2):
+                    int_1_cost = int(message[i])
+
+        if (self.name == "A"):
+            to_host = 2
+            cost = self.intf_L[1].cost
+        elif (self.name == "B"):
+            to_host = 1
+            cost = self.intf_L[0].cost
+
+        if (int_0_cost != -99):
+            self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
+
+        if (int_1_cost != -99):
+            self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
+
+        #send_routes()
+
+
     
     #communicate routing table to nearby routers     
     ## send out route update
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
-        if (self.name == "A"):
-            i = 1   #to send routing table to router B through A, must go through interface 1
-        elif (self.name == "B"):
-            i = 0   #to send routing table to router A through B, must go through interface 0
-
         message = Message(self.rt_tbl_D)
         p = NetworkPacket(0, 'control', message.to_byte_S())
 
-        
+        if (self.name == "A"):
+            i = 1   #to send routing table to router B through A, must go through interface 1
+            p.dst_addr = 2  #sending to host 2
+
+        elif (self.name == "B"):
+            i = 0   #to send routing table to router A through B, must go through interface 0
+            p.dst_addr = 1  #sending to host 1
+
         try:
             #TODO: add logic to send out a route update
             #decide which interfaces to use to send out the routing table updates
@@ -274,16 +306,6 @@ class Router:
                 return 
 
 class Message:
-    """    
-    #link state protocol
-    #each node makes a graph showing all connections in the network (showing which nodes are connected to which nodes)
-        #reachability matrix
-        #send message to all neighbors
-            #sequence number
-    #each node independeptly calculates the next best logical path from it to every possible destination
-    #the collection of best paths forms the routing table
-    """
-
     def __init__(self, rt_tbl_D):
         self.rt_tbl_D = rt_tbl_D
 
