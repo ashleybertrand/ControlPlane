@@ -24,29 +24,34 @@ if __name__ == '__main__':
     object_L.append(host3)
     
     #create routers and routing tables for connected clients (subnets)
+    forwarding_table = [[['A', 0], ['B', 0], ['D',0]], [['A',1], ['C',0], ['D',0]]]
     router_a_rt_tbl_D = {1: {0: 1}} # packet to host 1 through interface 1 for cost 1
     router_a = network_2.Router(name='A', 
                               intf_cost_L=[1,1], 
                               rt_tbl_D = router_a_rt_tbl_D, 
-                              max_queue_size=router_queue_size)
+                              max_queue_size=router_queue_size,
+                              forwarding_table = forwarding_table)
     object_L.append(router_a)
     router_b_rt_tbl_D = {2: {1: 3}} # packet to host 2 through interface 0 for cost 3
     router_b = network_2.Router(name='B', 
                               intf_cost_L=[1,3], 
                               rt_tbl_D = router_b_rt_tbl_D, 
-                              max_queue_size=router_queue_size)
+                              max_queue_size=router_queue_size,
+                              forwarding_table = forwarding_table)
     object_L.append(router_b)
     router_c_rt_tbl_D = {1: {0: 1}} # packet to host ? through interface ? for cost ?
     router_c = network_2.Router(name='C', 
                               intf_cost_L=[1,1], 
                               rt_tbl_D = router_c_rt_tbl_D, 
-                              max_queue_size=router_queue_size)
+                              max_queue_size=router_queue_size,
+                              forwarding_table = forwarding_table)
     object_L.append(router_c)
     router_d_rt_tbl_D = {2: {1: 3}} # packet to host ? through interface ? for cost ?
     router_d = network_2.Router(name='D', 
                               intf_cost_L=[1,3], 
                               rt_tbl_D = router_d_rt_tbl_D, 
-                              max_queue_size=router_queue_size)
+                              max_queue_size=router_queue_size,
+                              forwarding_table = forwarding_table)
     object_L.append(router_d)
     
     #create a Link Layer to keep track of links between network nodes
@@ -55,13 +60,13 @@ if __name__ == '__main__':
     
     #add all the links
     link_layer.add_link(link_2.Link(host1, 0, router_a, 0))
-    link_layer.add_link(link_2.Link(router_a, 2, router_b, 0))
-    link_layer.add_link(link_2.Link(router_b, 1, router_d, 0))
-    link_layer.add_link(link_2.Link(router_d, 2, host3, 0))
     link_layer.add_link(link_2.Link(host2, 0, router_a, 1))
-    link_layer.add_link(link_2.Link(router_a, 3, router_c, 0))
-    link_layer.add_link(link_2.Link(router_c, 1, router_d, 1))
-
+    link_layer.add_link(link_2.Link(router_a, 0, router_b, 0))
+    link_layer.add_link(link_2.Link(router_a, 1, router_c, 0))
+    link_layer.add_link(link_2.Link(router_b, 0, router_d, 0))
+    link_layer.add_link(link_2.Link(router_c, 0, router_d, 1))
+    link_layer.add_link(link_2.Link(router_d, 0, host3, 0))
+    
     #start all the objects
     thread_L = []
     for obj in object_L:
@@ -75,7 +80,8 @@ if __name__ == '__main__':
     
     #create some send events    
     for i in range(1):
-        host1.udt_send(2, 'Sample host1 data %d' % i)
+        host1.udt_send(3, 0, 'Sample host1 data %d' % i)
+        host2.udt_send(3, 1, 'Sample host2 data %d' % i)
         
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)
