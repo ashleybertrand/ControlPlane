@@ -10,7 +10,7 @@ from time import sleep
 
 ##configuration parameters
 router_queue_size = 0 #0 means unlimited
-simulation_time = 5 #give the network sufficient time to transfer all packets before quitting
+simulation_time = 6 #give the network sufficient time to transfer all packets before quitting
 
 if __name__ == '__main__':
     object_L = [] #keeps track of objects, so we can kill their threads
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     object_L.append(host3)
     
     #create routers and routing tables for connected clients (subnets)
-    forwarding_table = [[['A', 0], ['B', 0], ['D',0]], [['D',1], ['C',0], ['A',1]]]
+    forwarding_table = [[['A', 2], ['B', 1], ['D', 2]], [['D', 1], ['C', 0], ['A', 0]]]
     router_a_rt_tbl_D = {1: {0: 1}, 2: {1: 9}}
     router_a = network_2.Router(name='A', 
                               intf_cost_L=[1,9,1,2], 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     #create some send events
     for i in range(1):
         host3.udt_send(1, 3, 'Sample host3 data %d' % i)
-        
+
     #print the final routing tables
     for obj in object_L:
         if str(type(obj)) == "<class 'network_2.Router'>":

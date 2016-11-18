@@ -180,43 +180,39 @@ class Router:
     #  @param p Packet to forward
     #  @param i Incoming interface number for packet p
     def forward_packet(self, p, i):
-        outgoing = 0
         try:
             # TODO: Here you will need to implement a lookup into the 
             # forwarding table to find the appropriate outgoing interface
             # for now we assume the outgoing interface is also i
-
-            #packet comes for host1
-            if (int(p.source) == 1):
-                if self.name == 'A':
+            #router A
+            if (self.name == "A" and p.dst_addr == 3):
+                shorter_cost = min(self.intf_L[2].cost, self.intf_L[3].cost)
+                if (shorter_cost == self.intf_L[2].cost):
                     outgoing = self.forwarding_table[0][0][1]
-                elif self.name == 'B':
-                    outgoing = self.forwarding_table[0][1][1]
-                elif self.name == 'D':
-                    outgoing = self.forwarding_table[0][2][1]
+            elif (self.name == "A" and p.dst_addr == 1):
+                outgoing = self.forwarding_table[1][2][1]
 
-                print("Router_" + self.name + "-" + str(i), end=": ")
-                print('forwarding packet "%s"' % (p), end=" ")
-                print("from interface %d to %d" % (i, outgoing))
-                self.intf_L[(outgoing+1)%2].put(p.to_byte_S(), 'out', True)
+            #router B
+            elif (self.name == "B" and p.dst_addr == 3):
+                outgoing = self.forwarding_table[0][1][1]
 
-            #packet comes for host3
-            elif (int(p.source) == 3):
-                if self.name == 'D':
+            #router C
+            elif (self.name == "C" and p.dst_addr == 1):
+                outgoing = self.forwarding_table[1][1][1]
+
+            #router D
+            elif (self.name == "D" and p.dst_addr == 1):
+                shorter_cost = min(self.intf_L[0].cost, self.intf_L[1].cost)
+                if (shorter_cost == self.intf_L[1].cost):
                     outgoing = self.forwarding_table[1][0][1]
-                elif self.name == 'C':
-                    outgoing = self.forwarding_table[1][1][1]
-                elif self.name == 'A':
-                    outgoing = self.forwarding_table[1][2][1]
-                
-                print("Router_" + self.name + "-" + str(i), end=": ")
-                print('forwarding packet "%s"' % (p), end=" ")
-                print("from interface %d to %d" % (i, outgoing))
-                self.intf_L[(outgoing+1)%2].put(p.to_byte_S(), 'out', True)
+            elif (self.name == "D" and p.dst_addr == 3):
+                outgoing = self.forwarding_table[0][2][1]
 
-            #forward packets based on routing tables that are computed through the distance vector protocol
-           
-            #print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, (i+1)%2))
+            print("Router_" + self.name + "-" + str(i), end=": ")
+            print('forwarding packet "%s"' % (p), end=" ")
+            print("from interface %d to %d" % (i, outgoing))
+            self.intf_L[outgoing].put(p.to_byte_S(), 'out', True)
+
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass
@@ -366,47 +362,3 @@ class Message:
         interface2 = ''.join(rt_tbl_L[2])
         byte_S = interface0 + interface1 + interface2
         return byte_S
-
-    """
-    #extract a message from a byte string
-    #@param byte_S: byte string representation of a message
-    @classmethod
-    def from_byte_S(self, byte_S, return_msg):
-        #host 1 is utilizing 2 interfaces
-        if (byte_S[0].isdigit() and byte_S[2].isdigit()):
-            c0 = byte_S[0]
-            c2 = byte_S[2]
-            rt_tbl_S += ", 1: {0: " + c0 + ", 1: " + c2 + "}"
-        #host 1 is only utilizing interface 0
-        elif (byte_S[0].isdigit()):
-            c0 = byte_S[0]
-            rt_tbl_S = ", 1: {0: " + c0 + "}"
-        #host 1 is only utilizing interface 1
-        elif (byte_S[2].isdigit()):
-            c2 = byte_S[2]
-            rt_tbl_S = ", 1: {1: " + c2 + "}"
-
-        #host 2 is utilizing 2 interfaces
-        if (byte_S[1].isdigit() and byte_S[3].isdigit()):
-            c1 = byte_S[1]
-            c3 = byte_S[3]
-            rt_tbl_S += ", 2: {0: " + c1 + ", 1: " + c3 + "}"
-        #host 2 is only utilizing interface 0
-        elif (byte_S[1].isdigit()):
-            c1 = byte_S[1]
-            rt_tbl_S += ", 2: {0: " + c1 + "}"
-        #host 2 is only utilizing interface 1
-        elif (byte_S[3].isdigit()):
-            c3 = byte_S[3]
-            rt_tbl_S += ", 2: {1: " + c3 + "}"
-
-        rt_tbl_S = rt_tbl_S[2:]
-        rt_tbl_S = "{" + rt_tbl_S + "}"
-
-        rt_tbl_D = ast.literal_eval(rt_tbl_S)
-
-        if (return_msg):
-            return self(rt_tbl_D)
-        else:
-            return rt_tbl_D
-    """
