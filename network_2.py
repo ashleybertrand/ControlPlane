@@ -8,7 +8,8 @@ import threading
 import ast
 
 #keep track if message received is an update to routing table
-new_update = True
+new_update_A = True
+new_update_D = True
 
 ## wrapper class for a queue of packets
 class Interface:
@@ -168,10 +169,6 @@ class Router:
             #if packet exists make a forwarding decision
             if pkt_S is not None:
                 p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
-                if (p.source == 1):
-                    p.dst_addr = 3
-                elif (p.source == 3):
-                    p.dst_addr = 1
                 if p.prot_S == 'data':
                     self.forward_packet(p,i)
                 elif p.prot_S == 'control':
@@ -234,61 +231,27 @@ class Router:
         #TODO: add logic to update the routing tables and
         # possibly send out routing updates
         print('%s: Received routing update %s' % (self, p))
-        """
-        message = p.data_S  #ie. B received 1---
 
-        #check to see if this is a new update
-        num_digits = 0
-        for i in range(len(message)):
-            if (message[i].isdigit()):
-                num_digits = num_digits + 1
+        message = p.data_S
 
-        global new_update
-        #only run update if this is the first or second message received
-        if (num_digits == 1 or (num_digits == 2 and new_update)):
+        global new_update_A
+        global new_update_D
 
-            if (num_digits == 2):
-                new_update = False
+        if (self.name == "A" and new_update_A):
+            #check to see if we're receiving a packet from router B
+            if (int(message[5]) == 5):
+                new_update_A = False
+                cost = self.intf_L[2].cost + int(message[5])
+                self.rt_tbl_D[3] = {2: (cost)}
+                self.send_routes(p.source)
 
-            int_0_cost = -99
-            int_1_cost = -99
-            cost = -99
-            to_host = 0
-       
-            for i in range(len(message)):
-                if (message[i].isdigit()):
-                    #there is a cost at interface 0
-                    if (i == 0):
-                        int_0_cost = int(message[i])
-                    #there is a cost at interface 1
-                    if (i == 3):
-                        int_1_cost = int(message[i])
-
-            if (self.name == "A"):
-                to_host = p.dst_addr
-                cost = self.intf_L[1].cost  #router A's interface 1 cost
-            elif (self.name == "B"):
-                to_host = p.dst_addr
-                cost = self.intf_L[0].cost  #router B's interface 0 cost
-            elif (self.name == "C"):
-                to_host = p.dst_addr
-                cost = self.intf_L[0].cost
-            elif (self.name == "D"):
-                to_host = p.dst_addr
-                cost = self.intf_L[1].cost
-
-
-
-
-            if (int_0_cost != -99):
-                self.rt_tbl_D[to_host] = {0: (int_0_cost + cost)}
-
-            if (int_1_cost != -99):
-                self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
-
-            self.send_routes(p.source)
-        """
-
+        elif (self.name == "D" and new_update_D):
+            #check to see if we're receiving a packet from router C
+            if (int(message[0]) == 3):
+                new_update_D = False
+                cost = self.intf_L[1].cost + int(message[0])
+                self.rt_tbl_D[1] = {1: (cost)}
+                self.send_routes(p.source)
     
     #communicate routing table to nearby routers     
     ## send out route update
@@ -296,17 +259,7 @@ class Router:
     def send_routes(self, source):
         message = Message(self.rt_tbl_D)
 
-        print("what is source?", source)
-
-        #finding destination address
-        if (source == 1):
-            destination = 3
-        elif (source == 3):
-            destination = 1
-        else:
-            print("SOURCE IS NOT 1 OR 3")
-
-        p = NetworkPacket(destination, 'control', source, message.to_byte_S())
+        p = NetworkPacket(0, 'control', source, message.to_byte_S())
         
         #finding neighboring routers to send routing updates on
         if (self.name == "A"):

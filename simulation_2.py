@@ -78,8 +78,9 @@ if __name__ == '__main__':
     for t in thread_L:
         t.start()
     
-    #send out routing information from router A to router B interface 0
-    router_a.send_routes(1)
+    #send out routing information from router B and router C
+    router_b.send_routes(1)
+    router_c.send_routes(3)
  
     #create some send events    
     for i in range(1):
@@ -88,12 +89,10 @@ if __name__ == '__main__':
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)
 
-    """
     #create some send events
     for i in range(1):
         host3.udt_send(1, 3, 'Sample host3 data %d' % i)
-    """
-
+        
     #print the final routing tables
     for obj in object_L:
         if str(type(obj)) == "<class 'network_2.Router'>":
