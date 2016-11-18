@@ -60,6 +60,7 @@ class NetworkPacket:
     ##@param dst_addr: address of the destination host
     # @param data_S: packet payload
     # @param prot_S: upper layer protocol for the packet (data, or control)
+    # @param source: source of the packet, where it was originally sent from
     def __init__(self, dst_addr, prot_S, source, data_S):
         self.dst_addr = dst_addr
         self.prot_S = prot_S
@@ -143,6 +144,8 @@ class Router:
     ##@param name: friendly router name for debugging
     # @param intf_count: the number of input and output interfaces 
     # @param max_queue_size: max queue length (passed to Interface)
+    # @param rt_tbl_D: routing table
+    # @param forwarding_table: forwarding table for the two paths
     def __init__(self, name, intf_cost_L, rt_tbl_D, max_queue_size, forwarding_table):
         self.stop = False #for thread termination
         self.name = name
@@ -153,6 +156,7 @@ class Router:
             self.intf_L.append(Interface(cost, max_queue_size))
         #set up the routing table for connected hosts
         self.rt_tbl_D = rt_tbl_D 
+        #set up the forwarding table for connected hosts
         self.forwarding_table = forwarding_table
 
     ## called when printing the object

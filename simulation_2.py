@@ -23,8 +23,9 @@ if __name__ == '__main__':
     host3 = network_2.Host(3)
     object_L.append(host3)
     
-    #create routers and routing tables for connected clients (subnets)
+    #create forwarding table for routers
     forwarding_table = [[['A', 2], ['B', 1], ['D', 2]], [['D', 1], ['C', 0], ['A', 0]]]
+    #create routers and routing tables for connected clients (subnets)
     router_a_rt_tbl_D = {1: {0: 1}, 2: {1: 9}}
     router_a = network_2.Router(name='A', 
                               intf_cost_L=[1,9,1,2], 
