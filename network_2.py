@@ -168,6 +168,10 @@ class Router:
             #if packet exists make a forwarding decision
             if pkt_S is not None:
                 p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
+                if (p.source == 1):
+                    p.dst_addr = 3
+                elif (p.source == 3):
+                    p.dst_addr = 1
                 if p.prot_S == 'data':
                     self.forward_packet(p,i)
                 elif p.prot_S == 'control':
@@ -283,7 +287,8 @@ class Router:
                 self.rt_tbl_D[to_host] = {1: (int_1_cost + cost)}
 
             self.send_routes(p.source)
-            """
+        """
+
     
     #communicate routing table to nearby routers     
     ## send out route update
@@ -292,7 +297,6 @@ class Router:
         message = Message(self.rt_tbl_D)
 
         print("what is source?", source)
-        print("what type is source?", type(source))
 
         #finding destination address
         if (source == 1):
@@ -384,7 +388,7 @@ class Message:
     #convert routing table to a byte string for transmission over links
     def to_byte_S(self):
         rt_tbl_items = self.rt_tbl_D.items()
-        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"]]
+        rt_tbl_L = [["-", "-", "-"], ["-", "-", "-"], ["-", "-", "-"]]
 
         for host, intf_cost in rt_tbl_items:
             #router is utilizing 1 interface
@@ -400,14 +404,17 @@ class Message:
                 cost1 = str(intf_cost[4])
                 intf2 = str(intf_cost[7])
                 cost2 = str(intf_cost[10])
+
                 rt_tbl_L[int(intf1)][host-1] = cost1
                 rt_tbl_L[int(intf2)][host-1] = cost2
 
         interface0 = ''.join(rt_tbl_L[0])
         interface1 = ''.join(rt_tbl_L[1])
-        byte_S = interface0 + interface1
+        interface2 = ''.join(rt_tbl_L[2])
+        byte_S = interface0 + interface1 + interface2
         return byte_S
 
+    """
     #extract a message from a byte string
     #@param byte_S: byte string representation of a message
     @classmethod
@@ -449,3 +456,4 @@ class Message:
             return self(rt_tbl_D)
         else:
             return rt_tbl_D
+    """
